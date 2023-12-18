@@ -69,8 +69,10 @@ pub fn main() !u8 {
     var line_buffer: [1024]u8 = undefined;
 
     var sum_of_ids_of_possible_games: u32 = 0;
+    var pow: u64 = 0;
     while (true) {
         var result = try stdin.readUntilDelimiterOrEof(&line_buffer, '\n');
+        var min_bag = Bag{};
         var is_possible = true;
         if (result) |line| {
             //
@@ -83,6 +85,8 @@ pub fn main() !u8 {
             // Put a 0 into the game_id in case of an error since that
             // should be impossible with the AoC's data.
             const game_id = try fmt.parseUnsigned(u8, chunks.first()[5..], 10);
+            // Always presume that the game is possible.
+            sum_of_ids_of_possible_games += game_id;
             //
             // Find out the number of reaches the elf made in this game.
             //
@@ -92,7 +96,7 @@ pub fn main() !u8 {
             // Split the reaches (ignoring the 1st char, which is always a
             // space) that were made during the game.
             var reaches = mem.splitSequence(u8, reaches_chunk[1..], "; ");
-            outer: while (reaches.next()) |cubes_in_reach| {
+            while (reaches.next()) |cubes_in_reach| {
                 // Split the reach into the different cubes fetched from the bag.
                 var cubes = mem.splitSequence(u8, cubes_in_reach, ", ");
                 while (cubes.next()) |cube_data| {
@@ -110,27 +114,36 @@ pub fn main() !u8 {
                     var max: u8 = 0;
                     if (mem.eql(u8, "red", cube_color[0..len])) {
                         max = bag.red;
+                        if (number_of_cubes > min_bag.red) {
+                            min_bag.red = number_of_cubes;
+                        }
                     } else if (mem.eql(u8, "green", cube_color[0..len])) {
                         max = bag.green;
+                        if (number_of_cubes > min_bag.green) {
+                            min_bag.green = number_of_cubes;
+                        }
                     } else if (mem.eql(u8, "blue", cube_color[0..len])) {
                         max = bag.blue;
+                        if (number_of_cubes > min_bag.blue) {
+                            min_bag.blue = number_of_cubes;
+                        }
                     }
 
-                    if (number_of_cubes > max) {
+                    if (is_possible and number_of_cubes > max) {
                         is_possible = false;
-                        break :outer;
+                        // Remove the game_id from the sum
+                        sum_of_ids_of_possible_games -= game_id;
                     }
                 }
             }
-            if (is_possible) {
-                sum_of_ids_of_possible_games += game_id;
-            }
+            pow += @as(u32, min_bag.red) * @as(u32, min_bag.green) * @as(u32, min_bag.blue);
         } else {
             break;
         }
     }
 
-    try io.getStdOut().writer().print("Total: {d}\n", .{sum_of_ids_of_possible_games});
+    try io.getStdOut().writer().print("Part 1: {d}\n", .{sum_of_ids_of_possible_games});
+    try io.getStdOut().writer().print("Part 2: {d}\n", .{pow});
 
     return 0;
 }
